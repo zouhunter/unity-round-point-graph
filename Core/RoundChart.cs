@@ -11,9 +11,12 @@ namespace RoundPointGraph
     public class RoundChart : Graphic
     {
         [SerializeField]
-        protected RP_Info graphInfo;
+        protected RP_Info _graphInfo;
+        [SerializeField]
+        protected Text label_prefab;
         protected Vector3[] conners = new Vector3[4];
         protected List<RP_Line> lines = new List<RP_Line>();
+        protected LabelLayout labelLayout = new LabelLayout();
         protected float Radius
         {
             get
@@ -21,22 +24,43 @@ namespace RoundPointGraph
                 return (conners[2].x - conners[1].x) * 0.5f;
             }
         }
+
+        public Vector3[] radialPoints { get; private set; }
+        public RP_Info graphInfo { get { return _graphInfo; } }
+        protected override void Start()
+        {
+            labelLayout.SetContext(transform, label_prefab);
+            SetAllDirty();
+        }
+        protected override void OnValidate()
+        {
+            base.OnValidate();
+            SetAllDirty();
+        }
         protected override void OnPopulateMesh(VertexHelper vh)
         {
-            vh.Clear();
             rectTransform.GetLocalCorners(conners);
-            DrawCurcles(vh);
-            DrawRadialLines(vh);
-            DrawCustomLines(vh);
+            if (Radius > 0)
+            {
+                vh.Clear();
+                DrawCurcles(vh);
+                DrawRadialLines(vh);
+                DrawCustomLines(vh);
+            }
         }
 
-    
+        public void DisplyText(float offset)
+        {
+            labelLayout.SetLabels(radialPoints, offset);
+        }
+
         /// <summary>
         /// 清空所有线条
         /// </summary>
         public void ClearLines()
         {
-            foreach (var line in lines){
+            foreach (var line in lines)
+            {
                 line.ClearCreated();
             }
             lines.Clear();
@@ -47,7 +71,7 @@ namespace RoundPointGraph
         /// 设置显示点
         /// </summary>
         /// <param name="positions"></param>
-        public GameObject[] CreatePoints(string lineName, RP_Pos[] positions, GameObject prefab,RP_LineInfo lineInfo = null)
+        public GameObject[] CreatePoints(string lineName, RP_Pos[] positions, GameObject prefab, RP_LineInfo lineInfo = null)
         {
             GameObject[] created = null;
             var oldLine = lines.Find(x => x.lineName == lineName);
@@ -56,7 +80,7 @@ namespace RoundPointGraph
                 oldLine.UpdateLineInfoSelfty(lineInfo);
                 oldLine.startAngle = graphInfo.startAngle;
                 oldLine.clockwise = graphInfo.clockwise;
-                created = oldLine.ResetPoints(prefab,Radius, positions);
+                created = oldLine.ResetPoints(prefab, Radius, positions);
             }
             else
             {
@@ -88,7 +112,7 @@ namespace RoundPointGraph
                     var p2 = points[j + 1];
                     vh.AddUIVertexQuad(ChartUtil.GetLine(p1, p2, line.lineInfo.width, line.lineInfo.color * color));
                 }
-                if(points.Length > 2)
+                if (points.Length > 2)
                 {
                     var p1 = points[0];
                     var p2 = points[points.Length - 1];
@@ -103,11 +127,17 @@ namespace RoundPointGraph
         protected virtual void DrawRadialLines(VertexHelper vh)
         {
             int radialLineCount = Mathf.FloorToInt(360 / graphInfo.angleSpan);
+            radialPoints = new Vector3[radialLineCount];
             for (int i = 0; i < radialLineCount; i++)
             {
-                var angle = (i / (radialLineCount + 0f)) * 2 * Mathf.PI;
-                var point = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * Radius;
-                vh.AddUIVertexQuad(ChartUtil.GetLine(Vector3.zero, point, graphInfo.angleLineInfo.width, graphInfo.angleLineInfo.color * color));
+                var angle = (i / (radialLineCount + 0f)) * 360;
+                angle += graphInfo.startAngle;
+                if (graphInfo.clockwise)
+                {
+                    angle = -angle;
+                }
+                radialPoints[i] = new Vector2(Mathf.Cos(angle * Mathf.Deg2Rad), Mathf.Sin(angle * Mathf.Deg2Rad)) * Radius;
+                vh.AddUIVertexQuad(ChartUtil.GetLine(Vector3.zero, radialPoints[i], graphInfo.angleLineInfo.width, graphInfo.angleLineInfo.color * color));
             }
         }
 

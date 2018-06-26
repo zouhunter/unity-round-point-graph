@@ -15,6 +15,8 @@ namespace RoundPointGraph
         public float startAngle = 0;//超始角度
         public float angleSpan = 10;//角度跨度
         public int radialCount = 5;//径向圆个数
-        public bool clockwise = false;
+        public bool clockwise = false;//顺时针
+        public int fontSize = 18;//字体大小
+        public Color fontColor = Color.black;//字体颜色
     }
 }
